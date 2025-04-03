@@ -12,7 +12,7 @@ def main():
     mode = 'blue'
     drawing_shape = 'line'
     eraser_mode = False
-    drawing_shape_active = False  # For circle and square
+    drawing_shape_active = False  # For shapes that require start and end positions
     shape_start_pos = None
     shapes = []  # Store all drawn shapes
     
@@ -51,10 +51,12 @@ def main():
                     drawing_shape = 'square'
                 elif event.key == pygame.K_l:  # Draw line
                     drawing_shape = 'line'
-                elif event.key == pygame.K_t:  # Draw triangle rignt
+                elif event.key == pygame.K_t:  # Draw right triangle
                     drawing_shape = 'triangleR'
-                elif event.key == pygame.K_y:  # Draw triangle equaterial
+                elif event.key == pygame.K_y:  # Draw equilateral triangle
                     drawing_shape = 'triangleEq'
+                elif event.key == pygame.K_h:  # Draw rhombus
+                    drawing_shape = 'rhombus'
             
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:  # Left click
@@ -63,25 +65,28 @@ def main():
                     else:
                         if drawing_shape == 'line':
                             points.append(event.pos)
-                        elif drawing_shape in ['circle', 'square']:
+                        elif drawing_shape in ['circle', 'square', 'triangleR', 'triangleEq', 'rhombus']:
                             drawing_shape_active = True
                             shape_start_pos = event.pos
             
             if event.type == pygame.MOUSEBUTTONUP:
                 if event.button == 1 and drawing_shape_active:
-                    if drawing_shape == 'circle' and not eraser_mode:
-                        end_pos = event.pos
-                        radius = int(math.hypot(end_pos[0] - shape_start_pos[0], 
-                                             end_pos[1] - shape_start_pos[1]))
-                        shapes.append(('circle', shape_start_pos, radius, get_color(mode)))
-                    elif drawing_shape == 'square' and not eraser_mode:
-                        end_pos = event.pos
-                        width = end_pos[0] - shape_start_pos[0]
-                        height = end_pos[1] - shape_start_pos[1]
-                        shapes.append(('square', shape_start_pos, width, height, get_color(mode)))
-                    elif drawing_shape == 'triangleR' and not eraser_mode:
-                        end_pos = event.pos 
-                        
+                    end_pos = event.pos
+                    if not eraser_mode:
+                        if drawing_shape == 'circle':
+                            radius = int(math.hypot(end_pos[0] - shape_start_pos[0], 
+                                         end_pos[1] - shape_start_pos[1]))
+                            shapes.append(('circle', shape_start_pos, radius, get_color(mode)))
+                        elif drawing_shape == 'square':
+                            width = end_pos[0] - shape_start_pos[0]
+                            height = end_pos[1] - shape_start_pos[1]
+                            shapes.append(('square', shape_start_pos, width, height, get_color(mode)))
+                        elif drawing_shape == 'triangleR':  # Right triangle
+                            shapes.append(('triangleR', shape_start_pos, end_pos, get_color(mode)))
+                        elif drawing_shape == 'triangleEq':  # Equilateral triangle
+                            shapes.append(('triangleEq', shape_start_pos, end_pos, get_color(mode)))
+                        elif drawing_shape == 'rhombus':  # Rhombus
+                            shapes.append(('rhombus', shape_start_pos, end_pos, get_color(mode)))
                     drawing_shape_active = False
             
             if event.type == pygame.MOUSEMOTION:
@@ -104,6 +109,40 @@ def main():
             elif shape[0] == 'square':
                 rect = pygame.Rect(shape[1][0], shape[1][1], shape[2], shape[3])
                 pygame.draw.rect(screen, shape[4], rect)
+            elif shape[0] == 'triangleR':  # Right triangle
+                start, end = shape[1], shape[2]
+                points = [
+                    start,
+                    (end[0], start[1]),
+                    end
+                ]
+                pygame.draw.polygon(screen, shape[3], points)
+            elif shape[0] == 'triangleEq':  # Equilateral triangle
+                start, end = shape[1], shape[2]
+                side_length = math.hypot(end[0] - start[0], end[1] - start[1])
+                height = (math.sqrt(3)/2) * side_length
+                
+                # Calculate points for equilateral triangle
+                points = [
+                    start,
+                    (end[0], end[1]),
+                    ((start[0] + end[0])/2, start[1] - height)
+                ]
+                pygame.draw.polygon(screen, shape[3], points)
+            elif shape[0] == 'rhombus':  # Rhombus
+                start, end = shape[1], shape[2]
+                center_x = (start[0] + end[0]) / 2
+                center_y = (start[1] + end[1]) / 2
+                width = abs(end[0] - start[0])
+                height = abs(end[1] - start[1])
+                
+                points = [
+                    (center_x, start[1]),  # Top point
+                    (end[0], center_y),    # Right point
+                    (center_x, end[1]),    # Bottom point
+                    (start[0], center_y)    # Left point
+                ]
+                pygame.draw.polygon(screen, shape[3], points)
         
         # Draw current line (normal drawing)
         if drawing_shape == 'line':
@@ -121,20 +160,52 @@ def main():
         # Draw preview of current shape being drawn
         if drawing_shape_active and shape_start_pos:
             current_pos = pygame.mouse.get_pos()
+            color = get_color(mode)
+            
             if drawing_shape == 'circle' and not eraser_mode:
                 radius_preview = int(math.hypot(current_pos[0] - shape_start_pos[0], 
                                              current_pos[1] - shape_start_pos[1]))
-                pygame.draw.circle(screen, get_color(mode), shape_start_pos, radius_preview)
+                pygame.draw.circle(screen, color, shape_start_pos, radius_preview)
             elif drawing_shape == 'square' and not eraser_mode:
                 width = current_pos[0] - shape_start_pos[0]
                 height = current_pos[1] - shape_start_pos[1]
                 rect = pygame.Rect(shape_start_pos[0], shape_start_pos[1], width, height)
-                pygame.draw.rect(screen, get_color(mode), rect)
+                pygame.draw.rect(screen, color, rect)
+            elif drawing_shape == 'triangleR' and not eraser_mode:  # Right triangle preview
+                points = [
+                    shape_start_pos,
+                    (current_pos[0], shape_start_pos[1]),
+                    current_pos
+                ]
+                pygame.draw.polygon(screen, color, points)
+            elif drawing_shape == 'triangleEq' and not eraser_mode:  # Equilateral triangle preview
+                side_length = math.hypot(current_pos[0] - shape_start_pos[0], 
+                                       current_pos[1] - shape_start_pos[1])
+                height = (math.sqrt(3)/2) * side_length
+                
+                points = [
+                    shape_start_pos,
+                    (current_pos[0], current_pos[1]),
+                    ((shape_start_pos[0] + current_pos[0])/2, shape_start_pos[1] - height)
+                ]
+                pygame.draw.polygon(screen, color, points)
+            elif drawing_shape == 'rhombus' and not eraser_mode:  # Rhombus preview
+                center_x = (shape_start_pos[0] + current_pos[0]) / 2
+                center_y = (shape_start_pos[1] + current_pos[1]) / 2
+                
+                points = [
+                    (center_x, shape_start_pos[1]),  # Top point
+                    (current_pos[0], center_y),      # Right point
+                    (center_x, current_pos[1]),      # Bottom point
+                    (shape_start_pos[0], center_y)    # Left point
+                ]
+                pygame.draw.polygon(screen, color, points)
 
         pygame.display.flip()
         clock.tick(60)
 
 def get_color(color_mode):
+    """Returns RGB color tuple based on color mode"""
     if color_mode == 'blue':
         return (0, 0, 255)
     elif color_mode == 'red':
@@ -146,6 +217,7 @@ def get_color(color_mode):
     return (255, 255, 255)
 
 def drawLineBetween(screen, index, start, end, width, color_mode):
+    """Draws a line between two points with specified width and color"""
     color = get_color(color_mode)
     dx = start[0] - end[0]
     dy = start[1] - end[1]

@@ -21,7 +21,6 @@ WHITE = (255, 255, 255)
 SCREEN_WIDTH = 400
 SCREEN_HEIGHT = 600
 SPEED = 5
-COIN_SPEED = 2  # Speed for coins
 SCORE = 0
 COINS_COLLECTED = 0  # Variable to track collected coins
 
@@ -46,7 +45,7 @@ class Enemy(pygame.sprite.Sprite):
         self.rect.center = (random.randint(40, SCREEN_WIDTH-40), 0)  
 
     def move(self):
-        global SCORE
+        global SCORE, SPEED
         self.rect.move_ip(0, SPEED)
         if self.rect.top > SCREEN_HEIGHT:
             SCORE += 1
@@ -70,20 +69,31 @@ class Player(pygame.sprite.Sprite):
 class Coin(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
-        self.image = pygame.image.load("Coin.png")  # Load coin image
+        self.type = random.randint(1, 3)  # Randomize Coin Type (1-3)
+        coin_image = pygame.image.load("Coin.png")  # Load coin image
+        
+        # Scale based on coin type (higher type = smaller coin = more value)
+        if self.type == 1:
+            self.image = pygame.transform.scale(coin_image, (30, 30))
+            self.value = 1
+        elif self.type == 2:
+            self.image = pygame.transform.scale(coin_image, (20, 20))
+            self.value = 2
+        else:
+            self.image = pygame.transform.scale(coin_image, (10, 10))
+            self.value = 3
+            
         self.rect = self.image.get_rect()
-        self.rect.center = (random.randint(40, SCREEN_WIDTH-40), random.randint(0, SCREEN_HEIGHT-40))
+        self.respawn()
 
     def move(self):
-        # Move the coin towards the player
-        if P1.rect.centery > self.rect.centery:  # Move downwards towards the player
-            self.rect.move_ip(0, COIN_SPEED)
-        else:  # Move upwards if the coin is above the player
-            self.rect.top = 0
-            self.rect.center = (random.randint(40, SCREEN_WIDTH - 40), 0)
+        self.rect.move_ip(0, 2)  # Coins move down slowly
+        if self.rect.top > SCREEN_HEIGHT:
+            self.respawn()
 
     def respawn(self):
-        self.rect.center = (random.randint(40, SCREEN_WIDTH-40), random.randint(0, SCREEN_HEIGHT-40))
+        self.rect.center = (random.randint(40, SCREEN_WIDTH-40), 
+                           random.randint(-100, -40))  # Spawn above screen
 
 # Setting up Sprites        
 P1 = Player()
@@ -100,38 +110,39 @@ all_sprites.add(P1)
 all_sprites.add(E1)
 all_sprites.add(C1)
 
-# Adding a new User event 
-INC_SPEED = pygame.USEREVENT + 1
-pygame.time.set_timer(INC_SPEED, 1000)
+# Removed the INC_SPEED event since we're increasing speed based on coins only
 
 # Game Loop
 while True:
     # Cycles through all events occurring  
     for event in pygame.event.get():
-        if event.type == INC_SPEED:
-            SPEED += 0   
         if event.type == QUIT:
             pygame.quit()
             sys.exit()
 
     DISPLAYSURF.blit(background, (0, 0))
     scores = font_small.render(f"Score: {SCORE} Coins: {COINS_COLLECTED}", True, BLACK)
-    DISPLAYSURF.blit(scores, (10, 10))  # Display score and collected coins in the top left corner
+    DISPLAYSURF.blit(scores, (10, 10))
 
     # Moves and Re-draws all Sprites
     for entity in all_sprites:
         DISPLAYSURF.blit(entity.image, entity.rect)
-        if isinstance(entity, (Player, Enemy)):  # Only call move for Player and Enemy
-            entity.move()
-        elif isinstance(entity, Coin):  # Call move for Coin
-            entity.move()
+        entity.move()
 
     # Check for collision between Player and Coin
-    if pygame.sprite.spritecollideany(P1, coins):
-        COINS_COLLECTED += 1 # Increment collected coins
-        if COINS_COLLECTED%2==0:
-            SPEED+=0.5  
-        C1.respawn()  # Respawn the coin at a new random location
+    coin_collisions = pygame.sprite.spritecollide(P1, coins, True)
+    for coin in coin_collisions:
+        COINS_COLLECTED += coin.value
+        
+        # Increase speed based on total coins collected
+        # For example: increase speed by 0.5 every 5 coins
+        if COINS_COLLECTED % 5 == 0:
+            SPEED += 0.5
+        
+        # Add new coin when one is collected
+        new_coin = Coin()
+        coins.add(new_coin)
+        all_sprites.add(new_coin)
 
     # To be run if collision occurs between Player and Enemy
     if pygame.sprite.spritecollideany(P1, enemies):
