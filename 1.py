@@ -22,7 +22,7 @@ SCREEN_WIDTH = 400
 SCREEN_HEIGHT = 600
 SPEED = 5
 SCORE = 0
-COINS_COLLECTED = 0  # Variable to track collected coins
+COINS_COLLECTED = 0  
 
 # Setting up Fonts
 font = pygame.font.SysFont("Verdana", 60)
@@ -109,8 +109,6 @@ all_sprites = pygame.sprite.Group()
 all_sprites.add(P1)
 all_sprites.add(E1)
 all_sprites.add(C1)
-
-# Removed the INC_SPEED event since we're increasing speed based on coins only
 
 # Game Loop
 while True:

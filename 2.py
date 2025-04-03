@@ -108,7 +108,6 @@ while not done:
         snake_length += fruit_type
         Fruit_Timer=35+(10*level)
 
-    #if 
 
     # Update the snake's body
     if fruit_eaten:
